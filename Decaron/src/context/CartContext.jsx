@@ -1,11 +1,19 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
 
-  // ➕ Add item to cart
+  // 🔄 Fetch cart from backend on load
+  useEffect(() => {
+    fetch("http://localhost:5000/api/cart")
+      .then(res => res.json())
+      .then(data => setCart(data))
+      .catch(err => console.error("Failed to load cart:", err));
+  }, []);
+
+  // ➕ Add item to cart (DB)
   const addToCart = (product) => {
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.id === product.id);
@@ -16,48 +24,57 @@ export const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1 }];
+        return [
+          ...prevCart,
+          {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: 1,
+          },
+        ];
       }
     });
   };
 
-  // ➖ Remove one quantity at a time
-  const removeFromCart = (id) => {
-    setCart((prevCart) =>
-      prevCart
-        .map((item) =>
-          item.id === id
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
-        .filter((item) => item.quantity > 0) // remove item only if quantity hits 0
-    );
+  // ➖ Remove item from cart (DB) - decrements quantity by 1
+  const removeFromCart = async (cartItemId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/cart/${cartItemId}`, { method: "DELETE" });
+      const updatedItem = await response.json();
+      
+      // Update local state with the response from backend
+      setCart(prevCart => 
+        prevCart.map(item => 
+          item.id === cartItemId ? updatedItem : item
+        ).filter(item => item.id) // Remove if item was completely deleted
+      );
+    } catch (error) {
+      console.error("Failed to remove item:", error);
+    }
   };
 
-  // 🧹 Clear all items
-  const clearCart = () => {
+  // 🧹 Clear cart (DB)
+  const clearCart = async () => {
+    await fetch("http://localhost:5000/api/cart/clear-all", { method: "DELETE" });
     setCart([]);
   };
 
-  // 💰 Calculate total price
+  // 💰 Calculate total
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cart.reduce((total, item) => {
+      // Handle both direct price and nested product.price
+      const price = item.price || (item.product?.price || 0);
+      return total + price * (item.quantity || 1);
+    }, 0);
   };
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        clearCart,
-        getTotalPrice,
-      }}
-    >
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, getTotalPrice }}>
       {children}
     </CartContext.Provider>
   );
 };
 
-// 🔄 Custom hook for easier usage
 export const useCart = () => useContext(CartContext);

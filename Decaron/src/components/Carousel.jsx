@@ -1,11 +1,11 @@
-import React from 'react'
-import Slider from 'react-slick'
-import "slick-carousel/slick/slick.css"
-import "slick-carousel/slick/slick-theme.css"
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react' // ✅ Icons
+import React, { useEffect, useState } from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import api from "../api/axios";
 
-// Custom Arrow Components
 const NextArrow = ({ onClick }) => (
   <div
     className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/40 rounded-full p-2 cursor-pointer z-10 transition"
@@ -13,7 +13,7 @@ const NextArrow = ({ onClick }) => (
   >
     <ChevronRight className="text-white w-6 h-6" />
   </div>
-)
+);
 
 const PrevArrow = ({ onClick }) => (
   <div
@@ -22,49 +22,24 @@ const PrevArrow = ({ onClick }) => (
   >
     <ChevronLeft className="text-white w-6 h-6" />
   </div>
-)
+);
 
 const Carousel = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const [slides, setSlides] = useState([]);
 
-  const slides = [
-    {
-      id: 1,
-      src: "/images/banner1.jpg",
-      title: "Knie",
-      description: "Comfortable and stylish — perfect for your everyday adventure."
-    },
-    {
-      id: 2,
-      src: "/images/banner2.jpg",
-      title: "Hike",
-      description: "Durable hiking essentials designed for the toughest trails."
-    },
-    {
-      id: 3,
-      src: "/images/banner3.jpg",
-      title: "Nkie",
-      description: "Lightweight and affordable — great for casual wear."
-    },
-    {
-      id: 4,
-      src: "/images/banner4.jpeg",
-      title: "Prongles",
-      description: "Crispy and flavorful chips that make snack time more fun."
-    },
-    {
-      id: 5,
-      src: "/images/banner5.jpeg",
-      title: "Dave",
-      description: "Premium-quality product with exceptional performance and design."
-    },
-    {
-      id: 6,
-      src: "/images/banner6.jpg",
-      title: "Nut Master",
-      description: "Deliciously roasted nuts packed with protein and crunch."
-    },
-  ]
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await api.get("/products");
+        // show only first 6 or so products
+        setSlides(res.data.slice(0, 6));
+      } catch (err) {
+        console.error("Error fetching carousel products:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const settings = {
     dots: true,
@@ -74,9 +49,9 @@ const Carousel = () => {
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 3000,
-    nextArrow: <NextArrow />, // ✅ Add custom arrows
+    nextArrow: <NextArrow />,
     prevArrow: <PrevArrow />,
-  }
+  };
 
   return (
     <div className="relative">
@@ -84,25 +59,27 @@ const Carousel = () => {
         {slides.map((item) => (
           <div
             key={item.id}
-            className='bg-gradient-to-r from-[#0f0c29] via-[#302b63] to-[#24243e] cursor-pointer'
+            className="bg-gradient-to-r from-[#0f0c29] via-[#302b63] to-[#24243e] cursor-pointer"
             onClick={() => navigate(`/product/${item.id}`)}
           >
-            <div className='flex flex-col gap-6 justify-center items-center h-[600px] px-4 text-center text-white'>
+            <div className="flex flex-col gap-6 justify-center items-center h-[600px] px-4 text-center text-white">
               <img
-                src={item.src}
-                alt={item.title}
-                className='h-[400px] object-contain rounded-2xl shadow-lg transition-transform duration-300 hover:scale-105'
+                src={item.image}
+                alt={item.name}
+                className="h-[400px] object-contain rounded-2xl shadow-lg transition-transform duration-300 hover:scale-105"
               />
               <div>
-                <h2 className='text-2xl font-semibold mb-2'>{item.title}</h2>
-                <p className='max-w-2xl text-sm md:text-base text-gray-200'>{item.description}</p>
+                <h2 className="text-2xl font-semibold mb-2">{item.name}</h2>
+                <p className="max-w-2xl text-sm md:text-base text-gray-200">
+                  {item.description}
+                </p>
               </div>
             </div>
           </div>
         ))}
       </Slider>
     </div>
-  )
-}
+  );
+};
 
-export default Carousel
+export default Carousel;
